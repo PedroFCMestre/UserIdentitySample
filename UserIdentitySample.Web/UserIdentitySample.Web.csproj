@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\UserIdentitySample.ApiService\UserIdentitySample.ApiService.csproj" />
     <ProjectReference Include="..\UserIdentitySample.ServiceDefaults\UserIdentitySample.ServiceDefaults.csproj" />
   </ItemGroup>
 

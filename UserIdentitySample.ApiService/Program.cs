@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+
 using UserIdentitySample.ApiService.DbContext;
 using UserIdentitySample.ApiService.Domain;
 
@@ -15,7 +16,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddAuthentication().AddCookie(IdentityConstants.ApplicationScheme);
+builder.Services.AddAuthentication().AddCookie(IdentityConstants.BearerScheme).AddBearerToken();
 builder.Services.AddAuthorization();
 
 builder.Services.AddIdentityCore<User>()

@@ -1,0 +1,85 @@
+﻿@page "/register"
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity.Data
+@using UserIdentitySample.Web.ApiClients
+@rendermode InteractiveServer
+
+<PageTitle>Register</PageTitle>
+<h1>Register</h1>
+<EditForm Model="Input" asp-route-returnUrl="@ReturnUrl" method="post" OnValidSubmit="RegisterUser" FormName="register">
+    <hr />
+    <div class="form-floating mb-3">
+        <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="nome@exemplo.com" />
+        <label for="Input.Email">Email</label>
+    </div>
+    <div class="form-floating mb-3">
+        <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="palavra-passe" />
+        <label for="Input.Password">Palavra-passe</label>
+    </div>
+    <div class="form-floating mb-3">
+        <InputText type="password" @bind-Value="Input.ConfirmPassword" id="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="palavra-passe" />
+        <label for="Input.ConfirmPassword">Confirmar Palavra-passe</label>
+    </div>
+    <button type="submit" class="w-100 btn btn-lg btn-dark">Registar</button>
+</EditForm>
+@if (!string.IsNullOrEmpty(message))
+{
+    <h3>
+        @message
+    </h3>
+}
+@code {
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    private string? message;
+
+    [Inject] IdentityApiClient identityApiClient { get; set; } = default!;
+    [Inject] NavigationManager NavigationManager { get; set; } = default!;
+
+    public async Task RegisterUser(EditContext editContext)
+    {
+        var request = new RegisterRequest
+            {
+                Email = Input.Email,
+                Password = Input.Password,
+            };
+        var response = await identityApiClient.RegisterUserAsync(request);
+
+        if (response is not null)
+        {
+            message = response;
+
+            if (response.Equals("ok"))
+            {
+                message = "Great success";
+                await Task.Delay(5000).ContinueWith(_ =>
+                {
+                    NavigationManager.NavigateTo("/login");
+                });
+            }
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [EmailAddress]
+        [Display(Name = "Email")]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        [Display(Name = "Password")]
+        public string Password { get; set; } = "";
+
+        [DataType(DataType.Password)]
+        [Display(Name = "Confirm password")]
+        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+        public string ConfirmPassword { get; set; } = "";
+    }
+}

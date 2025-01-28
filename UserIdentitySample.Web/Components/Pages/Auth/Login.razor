@@ -1,0 +1,108 @@
+﻿@page "/login"
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authentication.BearerToken
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity.Data
+@using UserIdentitySample.Web.ApiClients
+@using UserIdentitySample.Web.Helpers
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Entrar</PageTitle>
+
+<h1>Autenticação</h1>
+<div class="row">
+    <div class="col-lg-6">
+        <section>
+            <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
+                <DataAnnotationsValidator />
+                <hr />
+                <ValidationSummary class="text-danger" role="alert" />
+                <div class="form-floating mb-3">
+                    <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="nome@exemplo.com" />
+                    <label for="Input.Email" class="form-label">Email</label>
+                    <ValidationMessage For="() => Input.Email" class="text-danger" />
+                </div>
+                <div class="form-floating mb-3">
+                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="palavra-passe" />
+                    <label for="Input.Password" class="form-label">Palavra-passe</label>
+                    <ValidationMessage For="() => Input.Password" class="text-danger" />
+                </div>
+                <div class="checkbox mb-3">
+                    <label class="form-label">
+                        <InputCheckbox @bind-Value="Input.RememberMe" class="darker-border-checkbox form-check-input" />
+                        Lembrar-me
+                    </label>
+                </div>
+                <div>
+                    <button type="submit" class="w-100 btn btn-lg btn-dark">Entrar</button>
+                </div>
+                <div>
+                    <p>
+                        <a href="Account/ForgotPassword">Esqueceu a sua palavra-passe?</a>
+                    </p>
+                    <p>
+                        <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Registe uma nova conta</a>
+                    </p>
+                    <p>
+                        <a href="Account/ResendEmailConfirmation">Reenviar email de confirmação</a>
+                    </p>
+                </div>
+            </EditForm>
+        </section>
+    </div>
+    @* <div class="col-lg-4 col-lg-offset-2">
+        <section>
+            <h3>Use another service to log in.</h3>
+            <hr />
+            <ExternalLoginPicker />
+        </section>
+    </div> *@
+</div>
+
+@code {
+    private string? errorMessage;
+
+    [Inject] IdentityApiClient identityApiClient { get; set; } = default!;
+    [Inject] AuthenticationStateProvider authenticationStateProvider { get; set; } = default!;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+    }
+
+    public async Task LoginUser()
+    {
+        LoginRequest loginRequest = new()
+            {
+                Email = Input.Email,
+                Password = Input.Password
+            };
+        AccessTokenResponse? tokenResponse = await identityApiClient.LoginUserAsync(loginRequest);
+
+        ((CustomAuthenticationStateProvider)authenticationStateProvider).SignInWithToken(tokenResponse);
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+
+        [Display(Name = "Lembrar-me?")]
+        public bool RememberMe { get; set; }
+    }
+}

@@ -1,5 +1,9 @@
-using UserIdentitySample.Web;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Identity;
+
+using UserIdentitySample.Web.ApiClients;
 using UserIdentitySample.Web.Components;
+using UserIdentitySample.Web.Helpers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,15 +13,23 @@ builder.AddServiceDefaults();
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
-
 builder.Services.AddOutputCache();
 
-builder.Services.AddHttpClient<WeatherApiClient>(client =>
-    {
-        // This URL uses "https+http://" to indicate HTTPS is preferred over HTTP.
-        // Learn more about service discovery scheme resolution at https://aka.ms/dotnet/sdschemes.
-        client.BaseAddress = new("https+http://apiservice");
-    });
+builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
+//builder.Services.AddScoped<IdentityApiClient>();
+
+builder.Services.AddAntiforgery();
+builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddAuthorization();
+builder.Services.AddAuthentication().AddIdentityCookies();
+
+builder.Services.AddHttpClient<IdentityApiClient>(client =>
+{
+    // This URL uses "https+http://" to indicate HTTPS is preferred over HTTP.
+    // Learn more about service discovery scheme resolution at https://aka.ms/dotnet/sdschemes.
+    client.BaseAddress = new("https+http://apiservice");
+});
+
 
 var app = builder.Build();
 
@@ -33,6 +45,9 @@ app.UseHttpsRedirection();
 app.UseAntiforgery();
 
 app.UseOutputCache();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapStaticAssets();
 
