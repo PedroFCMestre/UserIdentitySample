@@ -22,11 +22,18 @@ namespace UserIdentitySample.Web.ApiClients
             return content!.Errors.First().Value.First();
         }
 
-        public async Task<AccessTokenResponse?> LoginUserAsync(LoginRequest user)
+        public async Task<string?> LoginUserAsync(LoginRequest user)
         {
             var response = await _httpClient.PostAsJsonAsync("/login", user);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return "ok";
+
+            }
+
             var responseContent = await response.Content.ReadFromJsonAsync<AccessTokenResponse>();
-            return responseContent;
+            return "notok";
         }
 
     }

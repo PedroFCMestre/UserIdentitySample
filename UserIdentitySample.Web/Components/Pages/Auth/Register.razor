@@ -56,10 +56,7 @@
             if (response.Equals("ok"))
             {
                 message = "Great success";
-                await Task.Delay(5000).ContinueWith(_ =>
-                {
-                    NavigationManager.NavigateTo("/login");
-                });
+                NavigationManager.NavigateTo("/login");
             }
         }
     }

@@ -1,5 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication.BearerToken;
-using Microsoft.AspNetCore.Components.Authorization;
+﻿using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Identity;
 
 using System.Security.Claims;
 
@@ -8,72 +8,67 @@ namespace UserIdentitySample.Web.Helpers
     public class CustomAuthenticationStateProvider : AuthenticationStateProvider, IHostEnvironmentAuthenticationStateProvider
     {
         public readonly ClaimsPrincipal _user;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public CustomAuthenticationStateProvider()
+        public CustomAuthenticationStateProvider(IHttpContextAccessor httpContextAccessor)
         {
+            _httpContextAccessor = httpContextAccessor;
+
             _user = new ClaimsPrincipal(new ClaimsIdentity(new[]
                 {
                     new Claim(ClaimTypes.Name, "ATuaMae"),
                     new Claim(ClaimTypes.Role, "Admin"),
                     new Claim(ClaimTypes.NameIdentifier, "007"),
                 }
-            , "atuamae"
+            , IdentityConstants.ApplicationScheme
                 ));
         }
         public override async Task<AuthenticationState> GetAuthenticationStateAsync()
         {
-            return await Task.FromResult(new AuthenticationState(_user));
+            //return await Task.FromResult(new AuthenticationState(_user));
+            var httpContext = _httpContextAccessor.HttpContext;
+
+            if (httpContext?.User?.Identity?.IsAuthenticated == true)
+            {
+                var user = httpContext.User; // Fetch the ClaimsPrincipal from the cookie
+                return await Task.FromResult(new AuthenticationState(user));
+            }
+
+            return await Task.FromResult(new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity())));
         }
 
-        // You can call this method to notify that the authentication state has changed
-        public void MarkUserAsAuthenticated()
+        public void SignIn()
         {
-            ClaimsIdentity identity = new ClaimsIdentity(new[]
-                {
-                    new Claim(ClaimTypes.Name, "ATuaMae"),
-                    new Claim(ClaimTypes.Role, "Admin"),
-                    new Claim(ClaimTypes.NameIdentifier, "007"),
-                }
-            , "atuamae"
-                );
+            //var identity = new ClaimsIdentity(new[]
+            //    {
+            //        new Claim(ClaimTypes.Name, "ATuaMae"),
+            //        new Claim(ClaimTypes.Role, "Admin"),
+            //        new Claim(ClaimTypes.NameIdentifier, "007")
+            //    }, IdentityConstants.ApplicationScheme);
 
-            var principal = new ClaimsPrincipal(identity);
-            var state = new AuthenticationState(principal);
-            NotifyAuthenticationStateChanged(Task.FromResult(state));
+
+            //var principal = new ClaimsPrincipal(identity);
+            //var state = new AuthenticationState(principal);
+            //NotifyAuthenticationStateChanged(Task.FromResult(state));
         }
 
-        public void MarkUserAsLoggedOut()
+        public void SignOut()
         {
             var anonymous = new ClaimsPrincipal(new ClaimsIdentity());
             var state = new AuthenticationState(anonymous);
             NotifyAuthenticationStateChanged(Task.FromResult(state));
         }
 
-        public void SignInWithToken(AccessTokenResponse tokenResponse)
-        {
-            var identity = new ClaimsIdentity(new[]
-                {
-                    new Claim(ClaimTypes.Name, "ATuaMae"),
-                    new Claim(ClaimTypes.Role, "Admin"),
-                    new Claim(ClaimTypes.NameIdentifier, "007"),
-                    new Claim("Bearer", tokenResponse.AccessToken),
-                });
-            var principal = new ClaimsPrincipal(identity);
-            var state = new AuthenticationState(principal);
-            NotifyAuthenticationStateChanged(Task.FromResult(state));
-        }
-
         public void SetAuthenticationState(Task<AuthenticationState> authenticationStateTask)
         {
-            var identity = new ClaimsIdentity(new[]
-                {
-                    new Claim(ClaimTypes.Name, "ATuaMae"),
-                    new Claim(ClaimTypes.Role, "Admin"),
-                    new Claim(ClaimTypes.NameIdentifier, "007"),
-                });
-            var principal = new ClaimsPrincipal(identity);
-            var state = new AuthenticationState(principal);
-            NotifyAuthenticationStateChanged(Task.FromResult(state));
+            var httpContext = _httpContextAccessor.HttpContext;
+
+            if (httpContext?.User?.Identity?.IsAuthenticated == true)
+            {
+                var user = httpContext.User; // Fetch the ClaimsPrincipal from the cookie
+                var state = new AuthenticationState(user);
+                NotifyAuthenticationStateChanged(Task.FromResult(state));
+            }
         }
     }
 

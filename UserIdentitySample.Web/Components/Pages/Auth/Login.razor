@@ -3,62 +3,79 @@
 @using Microsoft.AspNetCore.Authentication.BearerToken
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity.Data
+@using System.Security.Claims
 @using UserIdentitySample.Web.ApiClients
 @using UserIdentitySample.Web.Helpers
 @inject NavigationManager NavigationManager
 @rendermode InteractiveServer
 
-<PageTitle>Entrar</PageTitle>
+<AuthorizeView>
+    <Authorized Context="auth">
+        <PageTitle>Bem-vindo</PageTitle>
+        <h1>Bem-vindo</h1>
+        <span>Bem vindo, @auth.User.Identity!.Name</span>
+        @foreach (var claim in auth.User.Claims)
+        {
+            <div>
+                <span>@claim.Type</span> - <span>@claim.Value</span>
+            </div>
+        }
+        <button class="btn btn-primary" @onclick="LogMeOut">Logout</button>
+    </Authorized>
+    <NotAuthorized Context="notAuth">
+        <PageTitle>Entrar</PageTitle>
 
-<h1>Autenticação</h1>
-<div class="row">
-    <div class="col-lg-6">
-        <section>
-            <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
-                <DataAnnotationsValidator />
-                <hr />
-                <ValidationSummary class="text-danger" role="alert" />
-                <div class="form-floating mb-3">
-                    <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="nome@exemplo.com" />
-                    <label for="Input.Email" class="form-label">Email</label>
-                    <ValidationMessage For="() => Input.Email" class="text-danger" />
-                </div>
-                <div class="form-floating mb-3">
-                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="palavra-passe" />
-                    <label for="Input.Password" class="form-label">Palavra-passe</label>
-                    <ValidationMessage For="() => Input.Password" class="text-danger" />
-                </div>
-                <div class="checkbox mb-3">
-                    <label class="form-label">
-                        <InputCheckbox @bind-Value="Input.RememberMe" class="darker-border-checkbox form-check-input" />
-                        Lembrar-me
-                    </label>
-                </div>
-                <div>
-                    <button type="submit" class="w-100 btn btn-lg btn-dark">Entrar</button>
-                </div>
-                <div>
-                    <p>
-                        <a href="Account/ForgotPassword">Esqueceu a sua palavra-passe?</a>
-                    </p>
-                    <p>
-                        <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Registe uma nova conta</a>
-                    </p>
-                    <p>
-                        <a href="Account/ResendEmailConfirmation">Reenviar email de confirmação</a>
-                    </p>
-                </div>
-            </EditForm>
-        </section>
-    </div>
-    @* <div class="col-lg-4 col-lg-offset-2">
+        <h1>Autenticação</h1>
+        <div class="row">
+            <div class="col-lg-6">
+                <section>
+                    <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
+                        <DataAnnotationsValidator />
+                        <hr />
+                        <ValidationSummary class="text-danger" role="alert" />
+                        <div class="form-floating mb-3">
+                            <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="nome@exemplo.com" />
+                            <label for="Input.Email" class="form-label">Email</label>
+                            <ValidationMessage For="() => Input.Email" class="text-danger" />
+                        </div>
+                        <div class="form-floating mb-3">
+                            <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="palavra-passe" />
+                            <label for="Input.Password" class="form-label">Palavra-passe</label>
+                            <ValidationMessage For="() => Input.Password" class="text-danger" />
+                        </div>
+                        <div class="checkbox mb-3">
+                            <label class="form-label">
+                                <InputCheckbox @bind-Value="Input.RememberMe" class="darker-border-checkbox form-check-input" />
+                                Lembrar-me
+                            </label>
+                        </div>
+                        <div>
+                            <button type="submit" class="w-100 btn btn-lg btn-dark">Entrar</button>
+                        </div>
+                        <div>
+                            <p>
+                                <a href="Account/ForgotPassword">Esqueceu a sua palavra-passe?</a>
+                            </p>
+                            <p>
+                                <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))" >Registe uma nova conta</a>
+                            </p>
+                            <p>
+                                <a href="Account/ResendEmailConfirmation">Reenviar email de confirmação</a>
+                            </p>
+                        </div>
+                    </EditForm>
+                </section>
+            </div>
+            @* <div class="col-lg-4 col-lg-offset-2">
         <section>
             <h3>Use another service to log in.</h3>
             <hr />
             <ExternalLoginPicker />
         </section>
     </div> *@
-</div>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
     private string? errorMessage;
@@ -75,9 +92,12 @@
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
 
+    private ClaimsPrincipal user;
+
     protected override async Task OnInitializedAsync()
     {
-
+        var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+        user = authState.User;
     }
 
     public async Task LoginUser()
@@ -87,9 +107,18 @@
                 Email = Input.Email,
                 Password = Input.Password
             };
-        AccessTokenResponse? tokenResponse = await identityApiClient.LoginUserAsync(loginRequest);
+        string? tokenResponse = await identityApiClient.LoginUserAsync(loginRequest);
 
-        ((CustomAuthenticationStateProvider)authenticationStateProvider).SignInWithToken(tokenResponse);
+        ((CustomAuthenticationStateProvider)authenticationStateProvider).SignIn();
+        var authState = await ((CustomAuthenticationStateProvider)authenticationStateProvider).GetAuthenticationStateAsync();
+        user = authState.User;
+    }
+
+    private async Task LogMeOut(MouseEventArgs e)
+    {
+        ((CustomAuthenticationStateProvider)authenticationStateProvider).SignOut();
+        var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+        user = authState.User;
     }
 
     private sealed class InputModel
@@ -106,3 +135,6 @@
         public bool RememberMe { get; set; }
     }
 }
+
+    
+    
