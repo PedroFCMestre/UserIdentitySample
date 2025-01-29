@@ -16,12 +16,9 @@ builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultScheme = IdentityConstants.ApplicationScheme;
-    options.DefaultSignInScheme = IdentityConstants.ApplicationScheme;
-})
+builder.Services.AddAuthentication()
     .AddCookie(IdentityConstants.ApplicationScheme);
+
 builder.Services.AddAuthorization();
 
 builder.Services.AddIdentityCore<User>(options =>

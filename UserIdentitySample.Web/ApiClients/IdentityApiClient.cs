@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication.BearerToken;
-using Microsoft.AspNetCore.Identity.Data;
+﻿using Microsoft.AspNetCore.Identity.Data;
 
 namespace UserIdentitySample.Web.ApiClients
 {
@@ -24,15 +23,25 @@ namespace UserIdentitySample.Web.ApiClients
 
         public async Task<string?> LoginUserAsync(LoginRequest user)
         {
-            var response = await _httpClient.PostAsJsonAsync("/login", user);
+            var queryString = "?useCookies=true";
+            var response = await _httpClient.PostAsJsonAsync($"/login{queryString}", user);
 
             if (response.IsSuccessStatusCode)
             {
+                // Extract the authentication cookie from API response
+                if (response.Headers.TryGetValues("Set-Cookie", out var cookies))
+                {
+                    foreach (var cookie in cookies)
+                    {
+                        _httpClient.DefaultRequestHeaders.Add("Cookie", cookie);
+                    }
+                }
+
                 return "ok";
 
             }
 
-            var responseContent = await response.Content.ReadFromJsonAsync<AccessTokenResponse>();
+            //var responseContent = await response.Content.ReadFromJsonAsync<AccessTokenResponse>();
             return "notok";
         }
 

@@ -6,8 +6,8 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 var postgres = builder.AddPostgres("postgres")
                         .WithContainerName("users")
-                        .WithPgAdmin();
-//.WithLifetime(ContainerLifetime.Persistent);
+                        .WithPgAdmin()
+                        .WithLifetime(ContainerLifetime.Persistent);
 
 var db = postgres.AddDatabase("users");
 

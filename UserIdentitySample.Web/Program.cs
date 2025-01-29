@@ -29,12 +29,12 @@ builder.Services.AddAuthentication(options =>
     .AddCookie(IdentityConstants.ApplicationScheme)
     .AddBearerToken(IdentityConstants.BearerScheme);
 
-builder.Services.AddHttpClient<IdentityApiClient>(client =>
+builder.Services.AddHttpClient<IdentityApiClient>(client => client.BaseAddress = new("https+http://apiservice"));
+/*.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
 {
-    // This URL uses "https+http://" to indicate HTTPS is preferred over HTTP.
-    // Learn more about service discovery scheme resolution at https://aka.ms/dotnet/sdschemes.
-    client.BaseAddress = new("https+http://apiservice");
-});
+    UseCookies = true,
+    AllowAutoRedirect = false
+});*/
 
 
 var app = builder.Build();
