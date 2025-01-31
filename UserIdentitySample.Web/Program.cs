@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Identity;
 
 using UserIdentitySample.Web.ApiClients;
 using UserIdentitySample.Web.Components;
-using UserIdentitySample.Web.Helpers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,27 +15,15 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddOutputCache();
 
-builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
-
-builder.Services.AddAntiforgery();
+builder.Services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
+//builder.Services.AddAntiforgery();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddAuthorization();
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultScheme = IdentityConstants.ApplicationScheme;
-    options.DefaultSignInScheme = IdentityConstants.ApplicationScheme;
-})
-    .AddCookie(IdentityConstants.ApplicationScheme)
-    .AddBearerToken(IdentityConstants.BearerScheme);
+builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
+    .AddCookie(IdentityConstants.ApplicationScheme);
 
 builder.Services.AddHttpClient<IdentityApiClient>(client => client.BaseAddress = new("https+http://apiservice"));
-/*.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-{
-    UseCookies = true,
-    AllowAutoRedirect = false
-});*/
-
 
 var app = builder.Build();
 
@@ -48,7 +36,7 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseAntiforgery();
+//app.UseAntiforgery();
 
 app.UseOutputCache();
 

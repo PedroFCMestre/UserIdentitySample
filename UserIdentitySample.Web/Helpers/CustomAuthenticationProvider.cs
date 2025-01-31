@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Components.Authorization;
+﻿using Microsoft.AspNetCore.Authentication.BearerToken;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
 namespace UserIdentitySample.Web.Helpers
@@ -69,6 +71,60 @@ namespace UserIdentitySample.Web.Helpers
                 var state = new AuthenticationState(user);
                 NotifyAuthenticationStateChanged(Task.FromResult(state));
             }
+        }
+
+        public void SignInWithToken(AccessTokenResponse accessToken)
+        {
+            List<Claim> claims = ParseAccessToken(accessToken.AccessToken);
+
+            if (claims.Count > 0)
+            {
+                var identity = new ClaimsIdentity(claims, IdentityConstants.BearerScheme);
+                var principal = new ClaimsPrincipal(identity);
+                var state = new AuthenticationState(principal);
+                NotifyAuthenticationStateChanged(Task.FromResult(state));
+            }
+        }
+
+        public List<Claim> ParseAccessToken(string accessToken)
+        {
+            List<Claim> toReturn = new();
+            var handler = new JwtSecurityTokenHandler();
+            if (handler.CanReadToken(accessToken))
+            {
+                var token = handler.ReadJwtToken(accessToken);
+
+                // Extract claims
+                var claims = token.Claims.ToDictionary(c => c.Type, c => c.Value);
+
+                // Example: Extract specific claims
+                var userId = claims.ContainsKey(ClaimTypes.NameIdentifier) ? claims[ClaimTypes.NameIdentifier] : null;
+                var email = claims.ContainsKey(ClaimTypes.Email) ? claims[ClaimTypes.Email] : null;
+                var roles = claims.Where(c => c.Key == ClaimTypes.Role).Select(c => c.Value).ToList();
+
+                Console.WriteLine($"User ID: {userId}");
+                Console.WriteLine($"Email: {email}");
+                Console.WriteLine($"Roles: {string.Join(", ", roles)}");
+
+
+                // Add claims to the list
+                foreach (var claim in claims)
+                {
+                    toReturn.Add(new Claim(claim.Key, claim.Value));
+                }
+            }
+            else
+            {
+                toReturn = new()
+                    {
+                        new Claim(ClaimTypes.Name, "ATuaMae"),
+                        new Claim("FullName", "Não Autenticado"),
+                        new Claim(ClaimTypes.NameIdentifier, "1")
+                    };
+                Console.WriteLine("Invalid JWT token.");
+            }
+
+            return toReturn;
         }
     }
 

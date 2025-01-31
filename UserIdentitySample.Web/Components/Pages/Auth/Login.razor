@@ -2,12 +2,14 @@
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authentication.BearerToken
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Server
+@using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.Identity.Data
 @using System.Security.Claims
 @using UserIdentitySample.Web.ApiClients
 @using UserIdentitySample.Web.Helpers
 @inject NavigationManager NavigationManager
-@rendermode InteractiveServer
+@* @rendermode InteractiveServer *@
 
 <AuthorizeView>
     <Authorized Context="auth">
@@ -20,7 +22,6 @@
                 <span>@claim.Type</span> - <span>@claim.Value</span>
             </div>
         }
-        <button class="btn btn-primary" @onclick="LogMeOut">Logout</button>
     </Authorized>
     <NotAuthorized Context="notAuth">
         <PageTitle>Entrar</PageTitle>
@@ -57,7 +58,7 @@
                                 <a href="Account/ForgotPassword">Esqueceu a sua palavra-passe?</a>
                             </p>
                             <p>
-                                <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))" >Registe uma nova conta</a>
+                                <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Registe uma nova conta</a>
                             </p>
                             <p>
                                 <a href="Account/ResendEmailConfirmation">Reenviar email de confirmação</a>
@@ -77,14 +78,33 @@
     </NotAuthorized>
 </AuthorizeView>
 
+@* <script type="text/javascript">
+        window.blazorExtensions = {
+
+    WriteCookie: function (name, value, days) {
+
+        var expires;
+        if (days) {
+            var date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+            expires = "; expires=" + date.toGMTString();
+        }
+        else {
+            expires = "";
+        }
+        document.cookie = name + "=" + value + expires + "; path=/";
+    }
+    }
+</script> *@
+
 @code {
     private string? errorMessage;
 
     [Inject] IdentityApiClient identityApiClient { get; set; } = default!;
     [Inject] AuthenticationStateProvider authenticationStateProvider { get; set; } = default!;
 
-    [CascadingParameter]
-    private HttpContext HttpContext { get; set; } = default!;
+    // [CascadingParameter]
+    // private HttpContext HttpContext { get; set; } = default!;
 
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = new();
@@ -92,13 +112,8 @@
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
 
-    private ClaimsPrincipal user;
+    [Inject] NavigationManager navigationManager { get; set; } = default!;
 
-    protected override async Task OnInitializedAsync()
-    {
-        var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
-        user = authState.User;
-    }
 
     public async Task LoginUser()
     {
@@ -109,17 +124,38 @@
             };
         string? tokenResponse = await identityApiClient.LoginUserAsync(loginRequest);
 
-        ((CustomAuthenticationStateProvider)authenticationStateProvider).SignIn();
-        var authState = await ((CustomAuthenticationStateProvider)authenticationStateProvider).GetAuthenticationStateAsync();
-        user = authState.User;
+        if (string.IsNullOrEmpty(tokenResponse))
+        {
+            errorMessage = "Credenciais inválidas";
+            return;
+        }
+
+        navigationManager.NavigateTo("/");
+        // var claims = new List<Claim>
+        // {
+        //     new Claim(ClaimTypes.Name, Input.Email),
+        //     new Claim("Token", tokenResponse)
+        // };
+
+        // var identity = new ClaimsIdentity(claims, IdentityConstants.ApplicationScheme);
+        // var state = new AuthenticationState(new ClaimsPrincipal(identity));
+        // ((ServerAuthenticationStateProvider)authenticationStateProvider).SetAuthenticationState(Task.FromResult(state));
+        
+        // await WriteCookieAsync(IdentityConstants.ApplicationScheme, tokenResponse, 100);
     }
 
     private async Task LogMeOut(MouseEventArgs e)
     {
-        ((CustomAuthenticationStateProvider)authenticationStateProvider).SignOut();
-        var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
-        user = authState.User;
+        var identity = new ClaimsIdentity(new List<Claim>());
+        var state = new AuthenticationState(new ClaimsPrincipal(identity));
+        ((ServerAuthenticationStateProvider)authenticationStateProvider).SetAuthenticationState(Task.FromResult(state));
     }
+
+    // public async Task WriteCookieAsync(string name, string value, int days)
+    // {
+
+    //     await jsRuntime.InvokeAsync<object>("blazorExtensions.WriteCookie", name, value, days);
+    // }
 
     private sealed class InputModel
     {
@@ -136,5 +172,5 @@
     }
 }
 
-    
-    
+
+

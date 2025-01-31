@@ -1,10 +1,16 @@
-﻿using Microsoft.AspNetCore.Identity.Data;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.BearerToken;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.Data;
+
+using System.Security.Claims;
 
 namespace UserIdentitySample.Web.ApiClients
 {
-    public class IdentityApiClient(HttpClient httpClient)
+    public class IdentityApiClient(HttpClient httpClient, IHttpContextAccessor httpContextAccessor)
     {
         private readonly HttpClient _httpClient = httpClient;
+        private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
 
         public async Task<string> RegisterUserAsync(RegisterRequest user)
         {
@@ -23,7 +29,7 @@ namespace UserIdentitySample.Web.ApiClients
 
         public async Task<string?> LoginUserAsync(LoginRequest user)
         {
-            var queryString = "?useCookies=true";
+            var queryString = "?useCookies=true&useSessionCookies=true";
             var response = await _httpClient.PostAsJsonAsync($"/login{queryString}", user);
 
             if (response.IsSuccessStatusCode)
@@ -34,15 +40,36 @@ namespace UserIdentitySample.Web.ApiClients
                     foreach (var cookie in cookies)
                     {
                         _httpClient.DefaultRequestHeaders.Add("Cookie", cookie);
+                        if (cookie.Contains(IdentityConstants.ApplicationScheme))
+                        {
+
+                            var claims = new List<Claim>
+                                {
+                                    new Claim(ClaimTypes.Name, user.Email),
+                                    new Claim("token", cookie)
+                                };
+                            var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, IdentityConstants.ApplicationScheme));
+
+                            var authProp = new AuthenticationProperties
+                            {
+                                IsPersistent = true,
+                                ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
+                            };
+
+                            _httpContextAccessor.HttpContext.SignInAsync(IdentityConstants.ApplicationScheme,
+                                principal, authProp);
+                            return cookie;
+                        }
                     }
                 }
-
-                return "ok";
-
+                else
+                {
+                    var tokenResponse = await response.Content.ReadFromJsonAsync<AccessTokenResponse>();
+                    return tokenResponse?.AccessToken;
+                }
             }
 
-            //var responseContent = await response.Content.ReadFromJsonAsync<AccessTokenResponse>();
-            return "notok";
+            return string.Empty;
         }
 
     }
